@@ -6,6 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 export default function DateFine() {
   const [baseDate, setBaseDate] = useState<string>("")
+  const [yearsToAdd, setYearsToAdd] = useState<number | string>("")
+  const [monthsToAdd, setMonthsToAdd] = useState<number | string>("")
   const [daysToAdd, setDaysToAdd] = useState<number | string>("")
   const [includeBaseDate, setIncludeBaseDate] = useState<boolean>(true)
   const [resultDate, setResultDate] = useState<string>("")
@@ -31,44 +33,51 @@ export default function DateFine() {
   }
 
   useEffect(() => {
-    if (baseDate && daysToAdd !== "") {
+    if (baseDate && (yearsToAdd !== "" || monthsToAdd !== "" || daysToAdd !== "")) {
       const base = parseDate(baseDate)
+      const years = Number.parseInt(yearsToAdd as string) || 0
+      const months = Number.parseInt(monthsToAdd as string) || 0
       const days = Number.parseInt(daysToAdd as string) || 0
 
-      if (base && !isNaN(base.getTime()) && days >= 0) {
+      if (base && !isNaN(base.getTime())) {
         const result = new Date(base)
-        result.setDate(result.getDate() - 1 + days)
+
+        result.setFullYear(result.getFullYear() + years)
+        result.setMonth(result.getMonth() + months)
+
+        // Adjust for base date counting
+        if (includeBaseDate) {
+          result.setDate(result.getDate() - 1 + days)
+        } else {
+          result.setDate(result.getDate() + days)
+        }
+
         const formattedResult = formatDateOutput(result)
         setResultDate(formattedResult)
       }
     } else {
       setResultDate("")
     }
-  }, [baseDate, daysToAdd, includeBaseDate])
+  }, [baseDate, yearsToAdd, monthsToAdd, daysToAdd, includeBaseDate])
 
   const handleDateInput = (value: string, setter: (val: string) => void) => {
-    // If empty, clear it
     if (value === "") {
       setter("")
       return
     }
 
-    // Extract only digits
     let digits = value.replace(/\D/g, "")
-
-    // Limit to 8 digits (DDMMYYYY)
     digits = digits.substring(0, 8)
 
-    // Format as DD/MM/YYYY while preserving structure
     let formatted = ""
     if (digits.length > 0) {
-      formatted = digits.substring(0, 2) // DD
+      formatted = digits.substring(0, 2)
     }
     if (digits.length > 2) {
-      formatted += "/" + digits.substring(2, 4) // MM
+      formatted += "/" + digits.substring(2, 4)
     }
     if (digits.length > 4) {
-      formatted += "/" + digits.substring(4, 8) // YYYY
+      formatted += "/" + digits.substring(4, 8)
     }
 
     setter(formatted)
@@ -76,7 +85,6 @@ export default function DateFine() {
 
   const handleDateBlur = (value: string, setter: (val: string) => void) => {
     if (value.length === 2) {
-      // Only day entered (e.g., "14")
       const today = new Date()
       const month = String(today.getMonth() + 1).padStart(2, "0")
       const year = today.getFullYear()
@@ -84,8 +92,21 @@ export default function DateFine() {
     }
   }
 
+  const handleNumberInput = (value: string, setter: (val: string | number) => void) => {
+    if (value === "") {
+      setter("")
+      return
+    }
+    const num = Number.parseInt(value)
+    if (!isNaN(num) && num >= 0) {
+      setter(num)
+    }
+  }
+
   const handleClear = () => {
     setBaseDate("")
+    setYearsToAdd("")
+    setMonthsToAdd("")
     setDaysToAdd("")
     setResultDate("")
     setIncludeBaseDate(true)
@@ -108,17 +129,48 @@ export default function DateFine() {
             />
           </div>
 
-          {/* Days to Add Input */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Number of Days to Add</label>
-            <input
-              type="number"
-              placeholder="Enter number of days"
-              value={daysToAdd}
-              onChange={(e) => setDaysToAdd(e.target.value)}
-              min="0"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition hover:cursor-pointer"
-            />
+            <label className="block text-sm font-semibold text-gray-700 mb-3">Days to Add</label>
+            <div className="grid grid-cols-3 gap-3">
+              {/* Years Input */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2 text-center">Year</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={yearsToAdd}
+                  onChange={(e) => handleNumberInput(e.target.value, setYearsToAdd)}
+                  min="0"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition hover:cursor-pointer text-center"
+                />
+              </div>
+
+              {/* Months Input */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2 text-center">Month</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={monthsToAdd}
+                  onChange={(e) => handleNumberInput(e.target.value, setMonthsToAdd)}
+                  min="0"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition hover:cursor-pointer text-center"
+                />
+              </div>
+
+              {/* Days Input */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2 text-center">Days</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={daysToAdd}
+                  onChange={(e) => handleNumberInput(e.target.value, setDaysToAdd)}
+                  min="0"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition hover:cursor-pointer text-center"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Checkbox for include base date */}
@@ -145,9 +197,11 @@ export default function DateFine() {
                 </div>
                 <div className="p-4">
                   <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wide mb-2 text-center">
-                    Days added:
+                    Total Added:
                   </p>
-                  <p className="text-lg font-bold text-cyan-500 text-center">{daysToAdd} Days</p>
+                  <p className="text-lg font-bold text-cyan-500 text-center">
+                    {yearsToAdd || 0}Y {monthsToAdd || 0}M {daysToAdd || 0}D
+                  </p>
                 </div>
               </div>
             </div>
